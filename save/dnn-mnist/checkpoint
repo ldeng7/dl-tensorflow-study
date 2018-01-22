@@ -1,0 +1,2 @@
+model_checkpoint_path: "dnn-mnist-20001"
+all_model_checkpoint_paths: "dnn-mnist-20001"
