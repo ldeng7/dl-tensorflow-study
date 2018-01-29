@@ -37,4 +37,4 @@ if __name__ == "__main__":
 
     dnn.batch_train(conf,
         lambda mnist: mnist.train.next_batch(BATCH_SIZE), mnist,
-        lambda: (mnist.validation.images, mnist.validation.labels))
+        lambda: (mnist.test.images[:2333], mnist.test.labels[:2333]))

@@ -42,7 +42,7 @@ if __name__ == "__main__":
     def next_batch(mnist):
         x, y = mnist.train.next_batch(BATCH_SIZE)
         return (np.reshape(x, [-1] + INPUT_SIZE), y)
-    validations_x = np.reshape(mnist.validation.images, [-1] + INPUT_SIZE)
+    validations_x = np.reshape(mnist.test.images[:2333], [-1] + INPUT_SIZE)
     cnn_lenet.batch_train(conf,
         next_batch, mnist,
-        lambda: (validations_x, mnist.validation.labels))
+        lambda: (validations_x, mnist.test.labels[:2333]))
