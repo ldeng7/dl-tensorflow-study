@@ -5,11 +5,11 @@ class TrainConf:
 
     def __init__(self):
         self.steps = 30001
-        self.info_per_steps = 1000
-        self.save_per_steps = 5000
+        self.info_per_steps = 200
+        self.save_per_steps = 2000
         
-        self.learning_rate_base = 0.05
-        self.learning_rate_decay = 0.7
+        self.learning_rate_base = 0.01
+        self.learning_rate_decay = 0.85
         self.learning_rate_decay_steps = 100
         self.regularization_rate = 0.0001
         self.weights_init_stddev = 0.1
