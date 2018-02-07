@@ -8,9 +8,7 @@ class TrainConf:
         self.info_per_steps = 1000
         self.save_per_steps = 5000
         
-        self.learning_rate_base = 0.01
-        self.learning_rate_decay = 0.85
-        self.learning_rate_decay_steps = 100
+        self.adam_learning_rate_base = 0.0001
         self.regularization_rate = 0.0001
         self.weights_init_stddev = 0.1
 
@@ -75,14 +73,7 @@ def batch_train(conf, next_batch, next_batch_arg, validations):
     y = infer(conf, x, tf.contrib.layers.l2_regularizer(conf.regularization_rate))
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = y, labels = tf.argmax(y_, 1))
     loss = tf.reduce_mean(cross_entropy) + tf.add_n(tf.get_collection('losses'))
-    learning_rate = tf.train.exponential_decay(
-        conf.learning_rate_base,
-        i_step,
-        conf.learning_rate_decay_steps,
-        conf.learning_rate_decay,
-        staircase = True
-    )
-    train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step = i_step)
+    train_op = tf.train.AdamOptimizer(conf.adam_learning_rate_base).minimize(loss, global_step = i_step)
 
     accs = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(accs, tf.float32), name = "accuracy")

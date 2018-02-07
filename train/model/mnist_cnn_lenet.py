@@ -37,12 +37,11 @@ if __name__ == "__main__":
     conf.cp_layers_size = [[5, 32, 1, 2, 2], [5, 64, 1, 2, 2]]
     conf.fc_layers_input_size = [512]
     conf.output_size = 10
-    conf.learning_rate_decay_steps = mnist.train.num_examples / BATCH_SIZE
 
     def next_batch(mnist):
         x, y = mnist.train.next_batch(BATCH_SIZE)
-        return (np.reshape(x, [-1] + INPUT_SIZE), y)
-    validations_x = np.reshape(mnist.test.images[:2333], [-1] + INPUT_SIZE)
+        return np.reshape(x, [-1] + INPUT_SIZE), y
+    validations_x = np.reshape(mnist.validation.images, [-1] + INPUT_SIZE)
     cnn_lenet.batch_train(conf,
         next_batch, mnist,
-        lambda: (validations_x, mnist.test.labels[:2333]))
+        lambda: (validations_x, mnist.validation.labels))
