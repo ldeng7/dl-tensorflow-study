@@ -17,7 +17,7 @@ class Eval:
 
     def run(self, x):
         val = self.session.run(self.gragh.get_tensor_by_name("y:0"), feed_dict = {
-            self.gragh.get_tensor_by_name("x:0"): x,
+            self.gragh.get_tensor_by_name("x:0"): [x],
         })
         return val.tolist()[0]
 
