@@ -13,11 +13,11 @@ class Eval:
         saver = tf.train.import_meta_graph(cp.model_checkpoint_path + ".meta")
         self.session = tf.Session()
         saver.restore(self.session, cp.model_checkpoint_path)
-        self.gragh = tf.get_default_graph()
+        self.graph = tf.get_default_graph()
 
     def run(self, x):
-        val = self.session.run(self.gragh.get_tensor_by_name("y:0"), feed_dict = {
-            self.gragh.get_tensor_by_name("x:0"): [x],
+        val = self.session.run(self.graph.get_tensor_by_name("y:0"), feed_dict = {
+            self.graph.get_tensor_by_name("x:0"): [x],
         })
         return val.tolist()[0]
 
