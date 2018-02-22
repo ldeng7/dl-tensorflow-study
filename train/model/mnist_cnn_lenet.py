@@ -23,6 +23,9 @@ class Eval:
         })
         return val.tolist()[0]
 
+    def close(self):
+        self.session.close()
+
 
 if __name__ == "__main__":
     import tensorflow.examples.tutorials.mnist.input_data as mnist_input_data
