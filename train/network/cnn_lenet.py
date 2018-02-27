@@ -22,17 +22,17 @@ def infer(conf, tensor, regularizer):
             stddev = conf.weights_init_stddev,
             name = "conv_weights_" + str(i + 1)
         ))
-        biases = tf.Variable(tf.constant(
-            0.,
-            shape = [sz[1]],
-            name = "conv_biases_" + str(i + 1)
-        ))
         conv = tf.nn.conv2d(
             tensor,
             weights,
             strides = [1, sz[2], sz[2], 1],
             padding = "SAME"
         )
+        biases = tf.Variable(tf.constant(
+            0.,
+            shape = [sz[1]],
+            name = "conv_biases_" + str(i + 1)
+        ))
         tensor = tf.nn.relu(tf.nn.bias_add(conv, biases))
         if len(sz) >= 5:
             tensor = tf.nn.max_pool(
@@ -52,7 +52,7 @@ def infer(conf, tensor, regularizer):
             stddev = conf.weights_init_stddev,
             name = "fc_weights_" + str(i + 1)
         ))
-        tf.add_to_collection('losses', regularizer(weights))
+        tf.add_to_collection("l2reg", regularizer(weights))
         biases = tf.Variable(tf.constant(
             0.,
             shape = [fc_sizes[i + 1]],
@@ -65,14 +65,14 @@ def infer(conf, tensor, regularizer):
     return tensor
 
 
-def batch_train(conf, next_batch, next_batch_arg, validations):
+def train(conf, next_batch, next_batch_arg, validations):
     x = tf.placeholder(tf.float32, [None] + conf.input_size, name = "x")
     y_ = tf.placeholder(tf.float32, [None, conf.output_size], name = "y_")
     i_step = tf.Variable(0, trainable = False)
 
     y = infer(conf, x, tf.contrib.layers.l2_regularizer(conf.regularization_rate))
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = y, labels = tf.argmax(y_, 1))
-    loss = tf.reduce_mean(cross_entropy) + tf.add_n(tf.get_collection('losses'))
+    loss = tf.reduce_mean(cross_entropy) + tf.add_n(tf.get_collection("l2reg"))
     train_op = tf.train.AdamOptimizer(conf.adam_learning_rate_base).minimize(loss, global_step = i_step)
 
     accs = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))

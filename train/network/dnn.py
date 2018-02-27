@@ -23,7 +23,7 @@ def infer(conf, tensor, regularizer):
             stddev = conf.weights_init_stddev,
             name = "weights_" + str(i + 1)
         ))
-        tf.add_to_collection('losses', regularizer(weights))
+        tf.add_to_collection("l2reg", regularizer(weights))
         biases = tf.Variable(tf.constant(
             0.,
             shape = [sizes[i + 1]],
@@ -36,14 +36,14 @@ def infer(conf, tensor, regularizer):
     return tensor
 
 
-def batch_train(conf, next_batch, next_batch_arg, validations):
+def train(conf, next_batch, next_batch_arg, validations):
     x = tf.placeholder(tf.float32, [None, conf.layers_input_size[0]], name = "x")
     y_ = tf.placeholder(tf.float32, [None, conf.output_size], name = "y_")
     i_step = tf.Variable(0, trainable = False)
 
     y = infer(conf, x, tf.contrib.layers.l2_regularizer(conf.regularization_rate))
     cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits = y, labels = tf.argmax(y_, 1))
-    loss = tf.reduce_mean(cross_entropy) + tf.add_n(tf.get_collection('losses'))
+    loss = tf.reduce_mean(cross_entropy) + tf.add_n(tf.get_collection("l2reg"))
     learning_rate = tf.train.exponential_decay(
         conf.learning_rate_base,
         i_step,

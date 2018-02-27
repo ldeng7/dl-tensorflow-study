@@ -25,7 +25,7 @@ class Eval:
         self.session.close()
 
 
-if __name__ == "__main__":
+def train():
     import tensorflow.examples.tutorials.mnist.input_data as mnist_input_data
     sys.path.append(os.path.dirname(sys.path[0]))
     from network import dnn
@@ -38,6 +38,9 @@ if __name__ == "__main__":
     conf.output_size = 10
     conf.learning_rate_decay_steps = mnist.train.num_examples / BATCH_SIZE
 
-    dnn.batch_train(conf,
+    dnn.train(conf,
         lambda mnist: mnist.train.next_batch(BATCH_SIZE), mnist,
         lambda: (mnist.validation.images, mnist.validation.labels))
+
+if __name__ == "__main__":
+    train()

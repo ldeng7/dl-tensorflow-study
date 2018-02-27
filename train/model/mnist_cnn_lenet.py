@@ -27,7 +27,7 @@ class Eval:
         self.session.close()
 
 
-if __name__ == "__main__":
+def train():
     import tensorflow.examples.tutorials.mnist.input_data as mnist_input_data
     sys.path.append(os.path.dirname(sys.path[0]))
     from network import cnn_lenet
@@ -45,6 +45,9 @@ if __name__ == "__main__":
         x, y = mnist.train.next_batch(BATCH_SIZE)
         return np.reshape(x, [-1] + INPUT_SIZE), y
     validations_x = np.reshape(mnist.validation.images, [-1] + INPUT_SIZE)
-    cnn_lenet.batch_train(conf,
+    cnn_lenet.train(conf,
         next_batch, mnist,
         lambda: (validations_x, mnist.validation.labels))
+
+if __name__ == "__main__":
+    train()
