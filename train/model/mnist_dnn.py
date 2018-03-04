@@ -2,8 +2,8 @@ import sys, os
 import tensorflow as tf
 
 BATCH_SIZE = 100
-file_dir = os.path.dirname(os.path.abspath(__file__))
-SAVE_PATH = file_dir + r"/../record/mnist-dnn/"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SAVE_PATH = BASE_DIR + r"/record/mnist-dnn/"
 
 
 class Eval:
@@ -27,20 +27,21 @@ class Eval:
 
 def train():
     import tensorflow.examples.tutorials.mnist.input_data as mnist_input_data
-    sys.path.append(os.path.dirname(sys.path[0]))
+    sys.path.append(BASE_DIR)
     from network import dnn
 
-    mnist = mnist_input_data.read_data_sets(file_dir + r"/../res/mnist", one_hot = True)
-    conf = dnn.TrainConf()
-    conf.save_path = SAVE_PATH
-    conf.save_name = "mnist-dnn"
-    conf.layers_input_size = [784, 500]
-    conf.output_size = 10
-    conf.learning_rate_decay_steps = mnist.train.num_examples / BATCH_SIZE
+    mnist = mnist_input_data.read_data_sets(BASE_DIR + r"/res/mnist", one_hot = True)
+    net = dnn.Network()
+    net.conf_save_path = SAVE_PATH
+    net.conf_save_name = "mnist-dnn"
+    net.layout_layers_input_size = [784, 500]
+    net.layout_output_size = 10
+    net.arg_learning_rate_decay_steps = mnist.train.num_examples / BATCH_SIZE
+    net.data_next_batch = lambda mnist: mnist.train.next_batch(BATCH_SIZE)
+    net.data_next_batch_arg = mnist
+    net.data_validations = lambda: (mnist.validation.images, mnist.validation.labels)
 
-    dnn.train(conf,
-        lambda mnist: mnist.train.next_batch(BATCH_SIZE), mnist,
-        lambda: (mnist.validation.images, mnist.validation.labels))
+    net.train()
 
 if __name__ == "__main__":
     train()
