@@ -3,21 +3,19 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.platform import gfile
 
+FNAMES = ["train_images", "train_labels", "validate_images", "validate_labels"]
 
-class Processor:
+class JpegSet:
 
     def __init__(self):
-        self.mean, self.std = 128, 128
         self.depth = 3
+        self.mean, self.std = 128, 128
         self.height_out, self.width_out = 299, 299
-        self.validation_ratio = 0.2
-        self.max_class_index = 0
-        self.class_indices = {}
+        self.validate_ratio = 0.2
+        self.max_label_index = 0
+        self.label_indices = {}
 
-        self.i_train_datas = 0
-        self.train_images, self.train_labels = [], []
-
-    # collect file pathes in 1st rank of sub dirs of dir_path
+    # collect file pathes in 1st rank of sub dirs
     def collect_in_dir(self, dir_path):
         file_pathes = {}
         sub_dir_names = []
@@ -29,7 +27,7 @@ class Processor:
             for d in gfile.Walk(sub_dir_path):
                 dir_file_pathes = [os.path.join(sub_dir_path, file_name) for file_name in d[2]]
                 random.shuffle(dir_file_pathes)
-                i = int(math.ceil(len(dir_file_pathes) * self.validation_ratio))
+                i = int(math.ceil(len(dir_file_pathes) * self.validate_ratio))
                 file_pathes[sub_dir_name] = (dir_file_pathes[:i], dir_file_pathes[i:])
                 break
         return file_pathes
@@ -41,16 +39,21 @@ class Processor:
         t = tf.squeeze(t, [0])
         self.tensor_out = tf.multiply(tf.subtract(t, self.mean), 1.0 / self.std)
 
-    def process(self, dir_path):
-        train_datas, validation_images, validation_labels = [], [], []
+    def preprocess(self, dir_path):
+        files, arrs, train_datas = [], [], []
+        for fname in FNAMES:
+            files.append(open(os.path.join(dir_path, fname), "wb"))
+            arrs.append([])
+
         file_pathes = self.collect_in_dir(dir_path)
         graph = tf.Graph()
         with graph.as_default():
             self.gen_process_jpeg_tensors()
         with tf.Session(graph = graph) as session:
-            for clazz, pathes in file_pathes.items():
-                y = [0.] * self.max_class_index
-                y[self.class_indices[clazz]] = 1.
+            for label, pathes in file_pathes.items():
+                print("processing dir: %s" % (label))
+                y = np.asarray([0.] * self.max_label_index, dtype = np.float32)
+                y[self.label_indices[label]] = 1.
                 for path in pathes[0]:
                     file_data = gfile.FastGFile(path, 'rb').read()
                     image = session.run(self.tensor_out, feed_dict = {self.tensor_in: file_data})
@@ -58,24 +61,42 @@ class Processor:
                 for path in pathes[1]:
                     file_data = gfile.FastGFile(path, 'rb').read()
                     image = session.run(self.tensor_out, feed_dict = {self.tensor_in: file_data})
-                    validation_images.append(image)
-                    validation_labels.append(y)
+                    arrs[2].append(image)
+                    arrs[3].append(y)
+
+        print("shuffling train datas")
         random.shuffle(train_datas)
-        for image, label in train_datas:
-            self.train_images.append(image)
-            self.train_labels.append(label)
-        self.validations = (np.asarray(validation_images), np.asarray(validation_labels))
+        for image, y in train_datas:
+            arrs[0].append(image)
+            arrs[1].append(y)
+        for i in range(len(FNAMES)):
+            print("writing file: %s" % FNAMES[i])
+            files[i].write(np.asarray(arrs[i]).data)
+            files[i].flush()
+            files[i].close()
+
+    def load(self, dir_path):
+        self.i_train_datas = 0
+        self.arrs = []
+        shapes = [
+            (-1, self.height_out, self.width_out, self.depth),
+            (-1, self.max_label_index),
+        ] * 2
+        for i in range(len(FNAMES)):
+            print("reading file: %s" % FNAMES[i])
+            file = open(os.path.join(dir_path, FNAMES[i]), "rb")
+            arr = np.frombuffer(file.read(), dtype = np.float32)
+            file.close()
+            arr = np.reshape(arr, shapes[i])
+            self.arrs.append(arr)
 
     def next_train_batch(self, count):
-        l = len(self.train_images)
+        l = len(self.arrs[0])
         i_end = self.i_train_datas + count
-        if i_end <= l:
-            out = (np.asarray(self.train_images[self.i_train_datas : i_end]),
-                np.asarray(self.train_labels[self.i_train_datas : i_end]))
-        else:
-            out = (np.asarray(self.train_images[self.i_train_datas:] + self.train_images[:(i_end - l)]),
-                np.asarray(self.train_labels[self.i_train_datas:] + self.train_labels[:(i_end - l)]))
-        if i_end >= l:
-            i_end -= l
+        out = (self.arrs[0][self.i_train_datas : i_end], self.arrs[1][self.i_train_datas : i_end])
+        if i_end >= l: i_end = 0
         self.i_train_datas = i_end
         return out
+
+    def valdiations(self):
+        return (self.arrs[2], self.arrs[3])

@@ -22,12 +22,11 @@ class Network:
 
         shape = tensor.get_shape().as_list()
         fc_size0 = shape[1] * shape[2] * shape[3]
-        return self.lf.fc_layers(
-            tf.reshape(tensor, [-1, fc_size0]),
-            [fc_size0] + self.layout_fc_size,
-            self.layout_output_size,
-            "fc_", name = "y"
-        )
+        tensor = tf.reshape(tensor, [-1, fc_size0])
+        fc_sizes = [fc_size0] + self.layout_fc_size
+        for i in range(len(fc_sizes) - 1):
+            tensor = self.lf.fc_layer(tensor, [sizes_in[i], sizes_in[i + 1]], True, "fc_%d_"%(i + 1))
+        return self.lf.fc_layer(tensor, [sizes_in[-1], self.layout_output_size], False, "fc_out_", name = "y")
 
     def train(self):
         self.lf = networks.LayerFactory(self.arg_weights_stddev,

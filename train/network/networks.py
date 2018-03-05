@@ -8,7 +8,7 @@ class LayerFactory:
         self.weights_stddev = weights_stddev
         self.regularizer = regularizer
 
-    def fc_layer(self, tensor, sz, var_pref, name = None):
+    def fc_layer(self, tensor, sz, do_relu, var_pref, name = None):
         weights = tf.get_variable(
             var_pref + "weights",
             shape = sz,
@@ -20,13 +20,10 @@ class LayerFactory:
             shape = [sz[1]],
             initializer = tf.constant_initializer(0.)
         )
-        return tf.add(tf.matmul(tensor, weights), biases, name = name)
-
-    def fc_layers(self, tensor, sizes_in, sz_out, var_pref, name = None):
-        for i in range(len(sizes_in) - 1):
-            tensor = self.fc_layer(tensor, [sizes_in[i], sizes_in[i + 1]], "%s%d_"%(var_pref, i + 1))
-            tensor = tf.nn.relu(tensor)
-        return self.fc_layer(tensor, [sizes_in[-1], sz_out], var_pref + "out_", name = name)
+        if do_relu:
+            return tf.nn.relu(tf.add(tf.matmul(tensor, weights), biases), name = name)
+        else:
+            return tf.add(tf.matmul(tensor, weights), biases, name = name)
 
     def conv_layer_ex(self, tensor, sz, is_same_padding, var_pref, name = None):
         h, w = sz[0], sz[0]
