@@ -16,10 +16,9 @@ class Network:
         self.arg_weights_stddev = 0.1
 
     def infer(self, tensor):
-        sizes_in = self.layout_layers_input_size
-        for i in range(len(sizes_in) - 1):
-            tensor = self.lf.fc_layer(tensor, [sizes_in[i], sizes_in[i + 1]], True, "fc_%d_"%(i + 1))
-        return self.lf.fc_layer(tensor, [sizes_in[-1], self.layout_output_size], False, "fc_out_", name = "y")
+        for i in range(1, len(self.layout_layers_input_size)):
+            tensor = self.lf.fc_layer(tensor, self.layout_layers_input_size[i], True, "fc_%d_"%(i + 1))
+        return self.lf.fc_layer(tensor, self.layout_output_size, False, "fc_out_", name = "y")
 
     def train(self):
         self.lf = networks.LayerFactory(self.arg_weights_stddev,

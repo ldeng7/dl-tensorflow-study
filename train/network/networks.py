@@ -8,16 +8,16 @@ class LayerFactory:
         self.weights_stddev = weights_stddev
         self.regularizer = regularizer
 
-    def fc_layer(self, tensor, sz, do_relu, var_pref, name = None):
+    def fc_layer(self, tensor, sz_out, do_relu, var_pref, name = None):
         weights = tf.get_variable(
             var_pref + "weights",
-            shape = sz,
+            shape = [tensor.shape[-1], sz_out],
             initializer = tf.truncated_normal_initializer(stddev = self.weights_stddev)
         )
         tf.add_to_collection(L2_COLLECTION_NAME, self.regularizer(weights))
         biases = tf.get_variable(
             var_pref + "biases",
-            shape = [sz[1]],
+            shape = [sz_out],
             initializer = tf.constant_initializer(0.)
         )
         if do_relu:
@@ -31,14 +31,14 @@ class LayerFactory:
             h, w = sz[0][0], sz[0][1]
         weights = tf.get_variable(
             var_pref + "weights",
-            shape = [h, w, sz[1], sz[2]],
+            shape = [h, w, tensor.shape[-1], sz[1]],
             initializer = tf.truncated_normal_initializer(stddev = self.weights_stddev)
         )
         tf.add_to_collection(L2_COLLECTION_NAME, self.regularizer(weights))
         conv = tf.nn.conv2d(
             tensor,
             weights,
-            strides = [1, sz[3], sz[3], 1],
+            strides = [1, sz[2], sz[2], 1],
             padding = "SAME" if is_same_padding else "VALID",
             name = name
         )
@@ -48,7 +48,7 @@ class LayerFactory:
         conv = self.conv_layer_ex(tensor, sz, is_same_padding, var_pref, name = name)
         biases = tf.get_variable(
             var_pref + "biases",
-            shape = [sz[2]],
+            shape = [sz[1]],
             initializer = tf.constant_initializer(0.)
         )
         return tf.nn.relu(tf.nn.bias_add(conv, biases))

@@ -14,19 +14,16 @@ class Network:
         self.arg_weights_stddev = 0.1
 
     def infer(self, tensor):
-        cp_sizes = [[None, self.layout_input_size[2]]] + self.layout_cp_size
         for i in range(len(self.layout_cp_size)):
-            sz = cp_sizes[i + 1]
-            tensor = self.lf.conv_layer(tensor, [sz[0], cp_sizes[i][1], sz[1], sz[2]], True, "cv_%d_"%(i + 1))
-            if len(sz) >= 5: tensor = self.lf.pool_layer(tensor, True, [sz[3], sz[4]], True)
+            sz = self.layout_cp_size[i]
+            tensor = self.lf.conv_layer(tensor, sz[:3], True, "cv_%d_"%(i + 1))
+            if len(sz) >= 5: tensor = self.lf.pool_layer(tensor, True, sz[3:], True)
 
         shape = tensor.get_shape().as_list()
-        fc_size0 = shape[1] * shape[2] * shape[3]
-        tensor = tf.reshape(tensor, [-1, fc_size0])
-        fc_sizes = [fc_size0] + self.layout_fc_size
-        for i in range(len(fc_sizes) - 1):
-            tensor = self.lf.fc_layer(tensor, [sizes_in[i], sizes_in[i + 1]], True, "fc_%d_"%(i + 1))
-        return self.lf.fc_layer(tensor, [sizes_in[-1], self.layout_output_size], False, "fc_out_", name = "y")
+        tensor = tf.reshape(tensor, [-1, shape[1] * shape[2] * shape[3]])
+        for i in range(len(self.layout_fc_size)):
+            tensor = self.lf.fc_layer(tensor, self.layout_fc_size[i], True, "fc_%d_"%(i + 1))
+        return self.lf.fc_layer(tensor, self.layout_output_size, False, "fc_out_", name = "y")
 
     def train(self):
         self.lf = networks.LayerFactory(self.arg_weights_stddev,
