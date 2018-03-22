@@ -1,6 +1,8 @@
+import signal
 import tensorflow as tf
 
 L2_COLLECTION_NAME = "l2reg"
+
 
 class LayerFactory:
 
@@ -8,7 +10,7 @@ class LayerFactory:
         self.weights_stddev = weights_stddev
         self.regularizer = regularizer
 
-    def fc_layer(self, tensor, sz_out, do_relu, var_pref, name = None):
+    def Fc_layer(self, tensor, sz_out, do_relu, var_pref, name = None):
         weights = tf.get_variable(
             var_pref + "weights",
             shape = [tensor.shape[-1], sz_out],
@@ -25,7 +27,7 @@ class LayerFactory:
         else:
             return tf.add(tf.matmul(tensor, weights), biases, name = name)
 
-    def conv_layer_ex(self, tensor, sz, is_same_padding, var_pref, name = None):
+    def Conv_layer_ex(self, tensor, sz, is_same_padding, var_pref, name = None):
         h, w = sz[0], sz[0]
         if list == type(sz[0]):
             h, w = sz[0][0], sz[0][1]
@@ -44,8 +46,8 @@ class LayerFactory:
         )
         return conv
 
-    def conv_layer(self, tensor, sz, is_same_padding, var_pref, name = None):
-        conv = self.conv_layer_ex(tensor, sz, is_same_padding, var_pref, name = name)
+    def Conv_layer(self, tensor, sz, is_same_padding, var_pref, name = None):
+        conv = self.Conv_layer_ex(tensor, sz, is_same_padding, var_pref, name = name)
         biases = tf.get_variable(
             var_pref + "biases",
             shape = [sz[1]],
@@ -53,7 +55,7 @@ class LayerFactory:
         )
         return tf.nn.relu(tf.nn.bias_add(conv, biases))
 
-    def pool_layer(self, tensor, is_max, sz, is_same_padding, name = None):
+    def Pool_layer(self, tensor, is_max, sz, is_same_padding, name = None):
         fn = tf.nn.max_pool if is_max else tf.nn.avg_pool
         return fn(
             tensor,
@@ -64,22 +66,40 @@ class LayerFactory:
         )
 
 
-def train(this, session, x, y_, train_op, loss, accuracy, i_step):
-    saver = tf.train.Saver()
-    cp = tf.train.get_checkpoint_state(this.conf_save_path)
-    if cp and cp.model_checkpoint_path:
-        saver.restore(session, cp.model_checkpoint_path)
-    else:
-        session.run(tf.global_variables_initializer())
+class Network:
 
-    xv, yv = this.data_validations()
-    for i in range(1, this.conf_steps):
-        xb, yb = this.data_next_batch(this.data_next_batch_arg)
-        _, loss_val, i_step_val = session.run([train_op, loss, i_step], feed_dict = {x: xb, y_: yb})
+    def __init__(self):
+        self.sig_int_recv = False
 
-        if i % this.conf_info_per_steps == 0:
-            print("batch train step: %d, loss: %g" % (i_step_val, loss_val))
-            print("accuracy: %g" % session.run(accuracy, feed_dict = {x: xv, y_: yv}))
+    def train_sig_int(self):
+        self.sig_int_recv = True
+        print("will save and quit at next info step")
 
-        if i % this.conf_save_per_steps == 0:
-            saver.save(session, this.conf_save_path + this.conf_save_name, global_step = i_step)
+    def Train(self):
+        graph = tf.Graph()
+        session = tf.Session(graph = graph)
+        cp = tf.train.get_checkpoint_state(self.conf_save_path)
+
+        with graph.as_default():
+            x, y, y_, train_op, loss, i_step = self.train()
+            accs = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
+            acc = tf.reduce_mean(tf.cast(accs, tf.float32), name = "accuracy")
+            saver = tf.train.Saver()
+            if cp and cp.model_checkpoint_path:
+                saver.restore(session, cp.model_checkpoint_path)
+            else:
+                session.run(tf.global_variables_initializer())
+
+        sig_int = signal.signal(signal.SIGINT, lambda s, f: self.train_sig_int())
+        xv, yv = self.data_validations()
+        for i in range(1, self.conf_steps + 1):
+            xb, yb = self.data_next_batch()
+            _, loss_val, i_step_val = session.run([train_op, loss, i_step], feed_dict = {x: xb, y_: yb})
+
+            if i % self.conf_info_per_steps == 0:
+                print("step: %d, loss: %g" % (i_step_val, loss_val))
+                print("accuracy: %g" % session.run(acc, feed_dict = {x: xv, y_: yv}))
+                if self.sig_int_recv:
+                    saver.save(session, self.conf_save_path + self.conf_save_name, global_step = i_step)
+                    signal.signal(signal.SIGINT, sig_int)
+                    break

@@ -2,13 +2,13 @@ import tensorflow as tf
 import network.networks as networks
 
 
-class Network:
+class DNN(networks.Network):
 
     def __init__(self):
-        self.conf_steps = 30001
+        super().__init__()
+        self.conf_steps = 30000
         self.conf_info_per_steps = 1000
-        self.conf_save_per_steps = 5000
-        
+
         self.arg_learning_rate_base = 0.8
         self.arg_learning_rate_decay = 0.99
         self.arg_learning_rate_decay_steps = 100
@@ -17,8 +17,8 @@ class Network:
 
     def infer(self, tensor):
         for i in range(1, len(self.layout_layers_input_size)):
-            tensor = self.lf.fc_layer(tensor, self.layout_layers_input_size[i], True, "fc_%d_"%(i + 1))
-        return self.lf.fc_layer(tensor, self.layout_output_size, False, "fc_out_", name = "y")
+            tensor = self.lf.Fc_layer(tensor, self.layout_layers_input_size[i], True, "fc_%d_"%(i + 1))
+        return self.lf.Fc_layer(tensor, self.layout_output_size, False, "fc_out_", name = "y")
 
     def train(self):
         self.lf = networks.LayerFactory(self.arg_weights_stddev,
@@ -39,8 +39,4 @@ class Network:
             staircase = True
         )
         train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step = i_step)
-
-        accs = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
-        accuracy = tf.reduce_mean(tf.cast(accs, tf.float32), name = "accuracy")
-
-        with tf.Session() as session: networks.train(self, session, x, y_, train_op, loss, accuracy, i_step)
+        return x, y, y_, train_op, loss, i_step
